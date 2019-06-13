@@ -1,0 +1,49 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Register
+{% endblock %}
+
+{% block main %}
+    <form action="/register" method="post" onsubmit="return checknameFunction()">
+        <div class="form-group">
+            <input id = "username" autocomplete="off" autofocus class="form-control" name="username" placeholder="Username" type="text">
+        </div>
+        <div class="form-group">
+            <input class="form-control" name="password" placeholder="Password" type="password">
+        </div>
+        <div class="form-group">
+            <input class="form-control" name="confirmation" placeholder="Password (again)" type="password">
+        </div>
+
+        <button id="button" class="btn btn-primary" type="submit">Register</button>
+    </form>
+
+    <script>
+        function checknameFunction()
+        {
+            var myForm = document.querySelector('form');
+            var username =encodeURIComponent(document.getElementById("username").value);
+            event.preventDefault();
+
+            $.get('/check', { username : username }, function(result)
+            {
+                if (result==true)
+                {
+                    myForm.submit();
+                }
+                else
+                {
+                    alert('Username taken!');
+                }
+
+            })
+
+            .fail(function()
+            {
+                alert( "error" );
+            })
+
+        };
+    </script>
+{% endblock %}
