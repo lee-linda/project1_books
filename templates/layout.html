@@ -34,7 +34,14 @@
             <div class="collapse navbar-collapse" id="navbar">
                 {% if session.user_id %}
                     <ul class="navbar-nav mr-auto mt-2">
-
+                        <li> </li>
+                        <form action="/search" method="post">
+                            <div class="form-group">
+                                <input autocomplete="off" autofocus class="form-control" name="searchBooks" placeholder="Search books" type="text">
+                            </div>
+                            <!--button class="fa fa-search" type="submit">Search</button-->
+                            <!--button type="submit"><i class="fa fa-search"></i></button-->
+                        </form>
                     </ul>
                     <ul class="navbar-nav ml-auto mt-2">
                         <li class="nav-item"><a class="nav-link" href="/logout">Log Out</a></li>

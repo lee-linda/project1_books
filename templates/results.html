@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Search Results
+{% endblock %}
+
+{% block main %}
+    {% if results %}
+        <h4>Search Results</h4>
+            <p> </p>
+        {% for item in results %}
+           <a href="{{ url_for('result', book_isbn=item.isbn) }}">
+                    {{ item.title }} by {{ item.author }}
+           </a>
+           <p> </p>
+        {% endfor %}
+
+    {% else %}
+        No matches.
+    {% endif %}
+
+{% endblock %}

@@ -136,6 +136,51 @@ def check():
         return jsonify(False)
 
 
+@app.route("/search", methods=["GET", "POST"])
+@login_required
+def search():
+    """Search for books when users type in the ISBN number, the title, or the author of a book.
+    After performing the search, the website should display a list of possible matching results,
+    or some sort of message if there were no matches. If the user typed in only part of a title, ISBN, or author name,
+    search page should find matches for those as well!"""
+
+    # User reached route via POST (as by submitting a form via POST)
+    if request.method == "POST":
+
+        # Ensure book info was submitted
+        if not request.form.get("searchBooks"):
+            return error("Missing info", 400)
+
+        # Retrieve search results for book
+        keyword = '%' + request.form.get("searchBooks") + '%'
+
+        results = db.execute("SELECT * FROM books WHERE isbn ILIKE :isbn OR title ILIKE :title OR author ILIKE :author",
+                             {"isbn": keyword, "title": keyword, "author": keyword}).fetchall()
+
+# SELECT * FROM books
+# WHERE title @@ to_tsquery('black') ;
+
+        # Redirect user to results page
+        return render_template("results.html", results=results)
+
+    # User reached route via GET (as by clicking a link or via redirect)
+    else:
+        return render_template("index.html")
+
+
+@app.route("/result/<book_isbn>")
+def result(book_isbn):
+    """Lists details about a book result."""
+
+    # Get book info.
+    book = db.execute("SELECT * FROM books WHERE isbn = :isbn", {"isbn": book_isbn}).fetchone()
+    # Make sure book exists.
+    if book is None:
+        return error("No such book.", 400)
+
+    return render_template("result.html", book=book)
+
+
 @app.route("/logout")
 def logout():
     """Log user out"""
