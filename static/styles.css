@@ -40,8 +40,79 @@ main
     text-align: center;
 }
 
+main .leftalign
+{
+    text-align: left;
+}
+
 main img
 {
     /* constrain images on small screens */
     max-width: 100%;
+}
+
+.hide
+{
+    /* hide radio button */
+    display: none;
+}
+
+.rating
+{
+    width: 100px;
+}
+
+.rating > label
+{
+    /* label for ratings */
+    float: right;  /* this pushes object from left to right */
+    position: relative;
+    width: 1.1em;
+    cursor: pointer;
+}
+
+.rating > label:hover:before,
+.rating > label:hover ~ label:before,
+.rating > input.radio-btn:checked ~ label:before
+{
+    /* to color stars for rating */
+    content: "\2605";
+    position: absolute;
+    color: #FFD700;
+}
+
+
+#star
+{
+    color: #FFD700;
+}
+
+
+/* Set a style for the Review Submit and Cancel button */
+.btn
+{
+  background-color: #002444;
+  color: white;
+  opacity: 0.8;
+  margin-right: 10px;
+  margin-top: 10px;
+}
+
+.cancel
+{
+  background-color: #fff68f;
+  color: black;
+}
+
+/* Add some hover effects to buttons */
+.btn:hover
+{
+  opacity: 1;
+}
+
+textarea
+{
+  min-width: 80%;
+  min-height: 200px;
+  margin: 10px;
 }

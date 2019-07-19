@@ -1,0 +1,70 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    My review
+{% endblock %}
+
+{% block main %}
+<div class="leftalign">
+
+    <h5>{{ book.title }} by {{ book.author }}</h5>
+    My review:
+    <form>
+        <textarea name="review" id="myreview">
+            {% if userReview %}
+            {{ userReview }}
+            {% endif %}
+        </textarea>
+        <br>
+
+        <button type="button" class="btn" onclick="submitReview()">Submit</button>
+        <button type="button" class="btn cancel" onclick="cancelReview()">Cancel</button>
+
+        <input id="isbn" type="hidden" value="{{ book.isbn }}" name="isbn">
+
+    </form>
+
+    <form id="book_page" action="/book" method="get" >
+        <input type="hidden" value="{{ book.isbn }}" name="book_isbn">
+    </form>
+
+</div>
+
+<script>
+
+    function submitReview()
+    {
+        var userReview = document.getElementById("myreview").value;
+        var isbn = document.getElementById("isbn").value;
+        var myForm = document.querySelector("#book_page");
+
+        // Get to review route to insert or update user review into reviews table in DB.
+        $.get('/review', { userReview : userReview, isbn : isbn }, function()
+          {
+              // After updating user review in DB, go back to book page.
+              myForm.submit();
+          }  )
+
+        .fail(function()
+        {
+            alert( "error" );
+        })
+    }
+
+    function cancelReview()
+    {
+        // Go back to book page.
+        var myForm = document.querySelector("#book_page");
+        myForm.submit();
+    }
+
+    window.onload = function()
+    {
+      let textarea = document.getElementById("myreview");
+      // Make sure cursor is at top left upon page loading.
+      textarea.focus();
+    };
+
+</script>
+
+{% endblock %}

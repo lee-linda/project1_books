@@ -1,15 +1,13 @@
 import os
-
-from flask import Flask, flash, jsonify, session, render_template, request, redirect
+from flask import Flask, flash, jsonify, session, render_template, request, redirect, url_for
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-from helpers import error, login_required, usd
+from helpers import error, login_required, lookup
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from werkzeug.exceptions import default_exceptions, HTTPException, InternalServerError
-
 
 app = Flask(__name__)
 
@@ -74,6 +72,7 @@ def login():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     """Register user"""
+
     # Forget any user_id
     session.clear()
 
@@ -104,14 +103,10 @@ def register():
         db.execute("INSERT INTO users (username, hash) VALUES (:username, :hash)",
                    {"username": request.form.get("username"), "hash": hash})
         db.commit()
-        result_id = db.execute("SELECT id FROM users WHERE username = :username", {"username": request.form.get("username")}).fetchall()
-
-        # Ensure user is inserted successfully, if not, username already exists
-        if not result_id:
-            return error("username already exists", 400)
+        result_id = db.execute("SELECT id FROM users WHERE username = :username", {"username": request.form.get("username")}).fetchone()
 
         # Remember which user has logged in
-        session["user_id"] = result_id
+        session["user_id"] = result_id[0]
 
         flash('Successfully registered!')
         # Redirect user to home page
@@ -129,10 +124,8 @@ def check():
     username = request.args.get("username")
 
     if not db.execute("SELECT * FROM users WHERE username = :username", {"username": username}).fetchone():
-        print('yes?')
         return jsonify(True)
     else:
-        print('no?')
         return jsonify(False)
 
 
@@ -157,9 +150,6 @@ def search():
         results = db.execute("SELECT * FROM books WHERE isbn ILIKE :isbn OR title ILIKE :title OR author ILIKE :author",
                              {"isbn": keyword, "title": keyword, "author": keyword}).fetchall()
 
-# SELECT * FROM books
-# WHERE title @@ to_tsquery('black') ;
-
         # Redirect user to results page
         return render_template("results.html", results=results)
 
@@ -168,17 +158,136 @@ def search():
         return render_template("index.html")
 
 
-@app.route("/result/<book_isbn>")
-def result(book_isbn):
+@app.route("/book")
+@login_required
+def book():
     """Lists details about a book result."""
 
     # Get book info.
+    book_isbn = request.args.get("book_isbn")
     book = db.execute("SELECT * FROM books WHERE isbn = :isbn", {"isbn": book_isbn}).fetchone()
+
+    # Make sure book exists.
+    if book is None:
+        return error("No such book.", 404)
+
+    user_book = db.execute("SELECT * FROM reviews WHERE id = :id AND isbn = :isbn",
+                           {"id": session["user_id"], "isbn": book_isbn}).fetchone()
+
+    # Get user rating from DB, if NULL, assign as 0
+    if not user_book or not user_book["rating"]:
+        userRating = 0
+    else:
+        userRating = user_book["rating"]
+
+    # Get review from DB, if NULL, assign as 0
+    if not user_book or not user_book["review"]:
+        userReview = None
+    else:
+        userReview = user_book["review"]
+
+    # Get rating and reviews for other users from reviews table, get username from users table
+    other_users = db.execute("SELECT username, rating, review FROM reviews INNER JOIN users ON users.id = reviews.id \
+                    WHERE users.id != :id AND isbn = :isbn", {"id": session["user_id"], "isbn": book_isbn}).fetchall()
+
+    api_info = lookup(book_isbn)
+
+    return render_template("book.html", book=book, userRating=userRating, userReview=userReview, other_users=other_users, api_info=api_info)
+
+
+@app.route("/api/<isbn>", methods=["GET"])
+@login_required
+def api(isbn):
+    """Get info for book using ISBN number from Goodreads API, website return a JSON response containing
+    the book’s title, author, publication date, ISBN number, review count, and average score. """
+
+    # Retrieve info for book from Goodreads API
+    book_info = lookup(isbn)
+
+    # Retrieve info from DB
+    book = db.execute("SELECT * FROM books WHERE isbn = :isbn", {"isbn": isbn}).fetchone()
+
+    # Make sure book exists.
+    if book_info is None or book is None:
+        return error("No such book.", 404)
+
+    book_info["title"] = book["title"]
+    book_info["author"] = book["author"]
+    book_info["year"] = book["year"]
+    book_info["isbn"] = book["isbn"]
+
+    return jsonify(book_info)
+
+
+@app.route("/rating", methods=["GET"])
+@login_required
+def rating():
+    """Insert or update user rating into reviews table in DB."""
+
+    userRating = request.args.get("userRating")
+    isbn = request.args.get("isbn")
+
+    # Check if user and book exists in DB.
+    if not db.execute("SELECT * FROM reviews WHERE id = :id AND isbn = :isbn", {"id": session["user_id"], "isbn": isbn}).fetchone():
+        # User with this book does not exist in reviews table yet
+        db.execute("INSERT INTO reviews (id, isbn, rating) VALUES (:id, :isbn, :rating)",
+                   {"id": session["user_id"], "isbn": isbn, "rating": userRating})
+        db.commit()
+    else:
+        # User with this book already exists in reviews table, update rating only.
+        db.execute("UPDATE reviews SET rating = :rating WHERE id = :id AND isbn = :isbn",
+                   {"rating": userRating, "id": session["user_id"], "isbn": isbn})
+        db.commit()
+
+    return redirect(url_for('book', book_isbn=isbn))
+
+
+@app.route("/myReview")
+@login_required
+def myReview():
+    """Provide book title, author and user review to myreview page."""
+
+    book_isbn = request.args.get("book_isbn")
+
+    book = db.execute("SELECT * FROM books WHERE isbn = :isbn", {"isbn": book_isbn}).fetchone()
+
     # Make sure book exists.
     if book is None:
         return error("No such book.", 400)
 
-    return render_template("result.html", book=book)
+    user_book = db.execute("SELECT * FROM reviews WHERE id = :id AND isbn = :isbn",
+                           {"id": session["user_id"], "isbn": book_isbn}).fetchone()
+
+    # Get review from DB, if NULL, assign as 0
+    if not user_book or not user_book["review"]:
+        userReview = None
+    else:
+        userReview = user_book["review"]
+
+    return render_template("myReview.html", book=book, userReview=userReview)
+
+
+@app.route("/review", methods=["GET"])
+@login_required
+def review():
+    """Insert or update user review into reviews table in DB."""
+
+    userReview = request.args.get("userReview")
+    isbn = request.args.get("isbn")
+
+    # Check if user and book row exist in reviews table.
+    if not db.execute("SELECT * FROM reviews WHERE id = :id AND isbn = :isbn", {"id": session["user_id"], "isbn": isbn}).fetchone():
+        # User with this book does not exist in reviews table yet
+        db.execute("INSERT INTO reviews (id, isbn, review) VALUES (:id, :isbn, :review)",
+                   {"id": session["user_id"], "isbn": isbn, "review": userReview})
+        db.commit()
+    else:
+        # User with this book already exists in reviews table, update review only.
+        db.execute("UPDATE reviews SET review = :review WHERE id = :id AND isbn = :isbn",
+                   {"review": userReview, "id": session["user_id"], "isbn": isbn})
+        db.commit()
+
+    return ("OK")
 
 
 @app.route("/logout")

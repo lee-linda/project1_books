@@ -1,0 +1,151 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Book
+{% endblock %}
+
+{% block main %}
+<div class="leftalign">
+    <h4 style="color:#EE9A4D">Book Details</h4>
+    <p> </p>
+    <ul>
+        <li>Title:  {{ book.title }} </li>
+        <li>Author:  {{ book.author }} </li>
+        <li>Publication Year:  {{ book.year }} </li>
+        <li>ISBN Number:  {{ book.isbn }} </li>
+    </ul>
+
+    {% if api_info %}
+        <h6 style="color:#B2C248" >From Goodreads:</h6>
+        Average rating: {{ api_info.average_score }}
+        <br>
+        Number of ratings: {{ api_info.review_count }}
+    {% else %}
+        <h6 style="color:#B2C248" >No information from Goodreads.</h6>
+    {% endif %}
+
+    <form>
+      <br>
+          {% if userRating %}
+              My rating:
+          {% else %}
+              Rate this book:
+          {% endif %}
+
+        <div class="rating">
+
+            <input id="star5" name="star" type="radio" value="5" class="radio-btn hide" />
+            <label for="star5" >☆</label>
+            <input id="star4" name="star" type="radio" value="4" class="radio-btn hide" />
+            <label for="star4" >☆</label>
+            <input id="star3" name="star" type="radio" value="3" class="radio-btn hide" />
+            <label for="star3" >☆</label>
+            <input id="star2" name="star" type="radio" value="2" class="radio-btn hide" />
+            <label for="star2" >☆</label>
+            <input id="star1" name="star" type="radio" value="1" class="radio-btn hide"  />
+            <label for="star1" >☆</label>
+            <!-- Using this hidden input to retain ISBN in string type even when ISBN starts with 0 or when it contains an X to ensure
+              ISBN being sent correctly to /rating route -->
+            <input id="isbn" type="hidden" value="{{ book.isbn }}" name="isbn">
+
+        </div>
+
+        <div>
+            {% if userReview %}
+                My review:
+                <br>
+                {{ userReview }}
+                <br> <br>
+                <a href="{{ url_for('myReview', book_isbn=book.isbn) }}">Edit review </a>
+            {% else %}
+                My review:
+                <br> <br>
+                <a href="{{ url_for('myReview', book_isbn=book.isbn) }}">Add review </a>
+            {% endif %}
+
+        </div>
+
+        <div>
+
+           {% if other_users %}
+              <br> <br>
+              <h6 style="color:#806517" >User reviews: </h6>
+              {% for user in other_users %}
+                  <h6 style="color:#437C17" >{{ user.username }} rated it</h6>
+                  {% if not user.rating %}
+                    ☆ ☆ ☆ ☆ ☆
+                  {% else %}
+                      {% for i in range (5) %}
+
+                          {% if i < user.rating  %}
+                            <span id="star">&#9733;</span>
+                          {% else %}
+                            ☆
+                          {% endif %}
+
+                      {% endfor %}
+                  {% endif %}
+                   <br>
+                  {% if user.review %}
+                   {{ user.review }}
+                  {% endif %}
+                   <br><br>
+              {% endfor %}
+
+           {% else %}
+              <br> <br>
+              <h6 style="color:#806517" >No other user reviews. </h6>
+           {% endif %}
+
+        </div>
+
+    </form>
+</div>
+
+<script>
+
+    var isbn = document.getElementById("isbn").value;
+
+    window.onload = function()  {
+
+        switch ( {{ userRating }} )
+        {
+          case 5:
+            document.getElementById("star5").checked = true;
+            break;
+          case 4:
+            document.getElementById("star4").checked = true;
+            break;
+          case 3:
+            document.getElementById("star3").checked = true;
+            break;
+          case 2:
+            document.getElementById("star2").checked = true;
+            break;
+          case 1:
+            document.getElementById("star1").checked = true;
+            break;
+          default:
+            console.log('No rating yet.');
+        }
+      }
+
+    $('input:radio').change(
+        function() {
+
+            var userRating = this.value;
+
+            // Go to /rating route to insert or update user rating into reviews table in DB.
+            $.get('/rating', { userRating : userRating, isbn : isbn }, function()
+              {
+              // Do nothing, /rating will refresh book page with updated rating.
+              }  )
+
+            .fail(function()
+            {
+                alert( "error" );
+            })
+                 } );
+</script>
+
+{% endblock %}
