@@ -5,12 +5,16 @@ Build a book review website. Users will be able to register for the website and 
 
 https://courses.edx.org/courses/course-v1:HarvardX+CS50W+Web/course/
 
-Files:
-application.py: Flask application file.
-books.csv: Info of 5000 different books, each one has an ISBN number, a title, an author, and a publication year. 
-requirements.txt: Python packages that need to be installed in order to run this web application.
-helpers.py: Python file with helper functions used in application.py.
-import.py: Python file to import books.csv info into Heroku database.
+Heroku app:  
+https://book-reader-cafe.herokuapp.com/  
+
+
+Files:  
+application.py: Flask application file.  
+books.csv: Info of 5000 different books, each one has an ISBN number, a title, an author, and a publication year.  
+requirements.txt: Python packages that need to be installed in order to run this web application.  
+helpers.py: Python file with helper functions used in application.py.  
+import.py: Python file to import books.csv info into Heroku database.  
 
 
 Setup:
@@ -18,7 +22,7 @@ Setup:
 $ pip install -r requirements.txt
 
 # ENV Variables
-$ export FLASK_APP = application.py # flask run
-$ export DATABASE_URL = Heroku Postgres DB URI
-$ export KEY = Goodreads API Key. # More info: https://www.goodreads.com/api
+$ export FLASK_APP = application.py # flask run  
+$ export DATABASE_URL = Heroku Postgres DB URI  
+$ export KEY = Goodreads API Key. # More info: https://www.goodreads.com/api  
 
